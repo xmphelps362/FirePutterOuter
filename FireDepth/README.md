@@ -16,16 +16,18 @@ Both versions need `YoloFire/export/fire.pt`, which is not in git. Copy it from 
 This shows the camera and the depth heatmap side by side, with boxes and distances, and prints one line per detection.
 Options: `--confidence`, `--processing-resolution` (lower is faster), `--horizontal-fov-degrees`.
 
-## ROS2 Humble (Ubuntu 22.04)
-
-Depth Anything needs an NVIDIA GPU, so run this on a laptop or a Jetson that subscribes to the TurtleBot's camera, not
-on the TurtleBot's Raspberry Pi.
+## ROS2 Humble on the Jetson (JetPack 6)
 
 ```bash
-bash FireDepth/setup_ros_env.sh        # once, makes .venv-ros with Python 3.10
+bash FireDepth/setup_ros_env.sh        # once: Jetson torch, Depth Anything, YOLO in .venv-ros
+source .venv-ros/bin/activate && bash YoloFire/jetson/build_engine.sh YoloFire/export/fire.pt   # once, optional: TensorRT YOLO
 source /opt/ros/humble/setup.bash
 ros2 launch FireDepth/fire_depth.launch.py camera_x:=0.07 camera_z:=0.12 camera_pitch:=0.0
 ```
+
+The launch file uses `fire.engine` if it exists, otherwise `fire.pt`. The first run downloads the Depth Anything
+weights (about 1.4 GB), so the Jetson needs internet once. If depth is too slow, try `processing_resolution:=266`.
+YOLO keeps its own rate either way.
 
 Subscribes to `/camera/image_raw` and `/camera/camera_info`. Change them with `image_topic:=` and `camera_info_topic:=`.
 

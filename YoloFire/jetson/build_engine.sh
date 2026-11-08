@@ -13,6 +13,6 @@ elif [ -f "$META" ]; then
 else
   IMGSZ=640; echo "no $META, using imgsz 640"
 fi
-source .venv/bin/activate
+[ -n "${VIRTUAL_ENV:-}" ] || source .venv/bin/activate
 yolo export model="$PT" format=engine half=True imgsz="$IMGSZ" device=0
 echo "engine: ${PT%.pt}.engine (imgsz $IMGSZ)"
