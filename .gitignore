@@ -1,0 +1,7 @@
+*.Identifier
+*:Zone.Identifier
+__pycache__/
+.venv/
+*.pt
+*.onnx
+*.engine

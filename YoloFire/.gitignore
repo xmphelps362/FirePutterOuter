@@ -1,0 +1,11 @@
+.venv/
+data/
+runs/
+export/
+reports/*.json
+*.pt
+*.onnx
+*.engine
+__pycache__/
+.pytest_cache/
+.superpowers/

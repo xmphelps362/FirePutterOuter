@@ -1,0 +1,23 @@
+# Training config. Run from the project root:
+#   yolo train cfg=train.yaml                       -> runs/detect/n640/weights/best.pt
+#   yolo train cfg=train.yaml name=n640_tower       (after adding photos; any key can be overridden like this)
+# Log each run in experiments/journal.md.
+task: detect
+mode: train
+model: yolo26n.pt
+data: data/detection/data.yaml
+imgsz: 640
+epochs: 150
+patience: 40
+batch: -1          # auto-fit GPU memory
+name: n640
+exist_ok: true
+seed: 0
+
+# Augmentation: candles look smaller from the tower, so zoom out a lot.
+scale: 0.7
+degrees: 5
+fliplr: 0.5
+hsv_v: 0.4
+mosaic: 1.0
+close_mosaic: 15

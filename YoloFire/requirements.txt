@@ -1,0 +1,7 @@
+# torch==2.11.0+cu128 torchvision==0.26.0+cu128 are installed by scripts/setup_wsl.sh
+ultralytics==8.4.208
+opencv-python==5.0.0.93
+pytest==9.2.0
+pyyaml==6.0.3
+onnx==1.23.2
+onnxslim==0.1.99
