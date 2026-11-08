@@ -9,7 +9,7 @@ import numpy as np
 
 FRAME_PORT = 5600
 JPEG_LENGTH_HEADER = struct.Struct(">I")
-SENDER_SCRIPT = Path(__file__).resolve().parent.parent / "windows" / "send_webcam.py"
+SENDER_SCRIPT = Path(__file__).resolve().parent / "send_webcam.py"
 
 
 class WindowsWebcam:

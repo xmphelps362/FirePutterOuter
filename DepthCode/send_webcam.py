@@ -1,4 +1,4 @@
-"""Launched by webcam_depth/windows_webcam.py under Windows Python. Requires: py -m pip install opencv-python"""
+"""Launched by windows_webcam.py under Windows Python. Requires: py -m pip install opencv-python"""
 
 import socket
 import struct

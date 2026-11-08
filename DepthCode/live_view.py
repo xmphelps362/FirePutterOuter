@@ -6,8 +6,8 @@ import time
 import cv2
 import numpy as np
 
-from webcam_depth.depth_estimator import MetricDepthEstimator, to_depth_millimeters
-from webcam_depth.windows_webcam import WindowsWebcam
+from depth_estimator import MetricDepthEstimator, to_depth_millimeters
+from windows_webcam import WindowsWebcam
 
 ESCAPE_KEY = 27
 SAVE_KEY = ord("s")
@@ -58,9 +58,8 @@ def main() -> None:
         if frame_bgr is None:
             continue
         depth_meters = depth_estimator.estimate_meters(frame_bgr)
-        frame_width, frame_height = frame_bgr.shape[1], frame_bgr.shape[0]
-        heatmap = cv2.resize(depth_heatmap(depth_meters, arguments.max_display_meters), (frame_width, frame_height))
-        cv2.imshow("Depth", np.hstack([heatmap, color_scale(frame_height, arguments.max_display_meters)]))
+        heatmap = depth_heatmap(depth_meters, arguments.max_display_meters)
+        cv2.imshow("Depth", np.hstack([heatmap, color_scale(heatmap.shape[0], arguments.max_display_meters)]))
 
 
 if __name__ == "__main__":

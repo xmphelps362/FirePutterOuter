@@ -5,3 +5,5 @@ __pycache__/
 *.pt
 *.onnx
 *.engine
+.venv-ros/
+depth-anything-3/
