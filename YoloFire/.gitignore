@@ -1,7 +1,7 @@
 .venv/
 data/
 runs/
-export/
+export/*
 reports/*.json
 *.pt
 *.onnx
@@ -9,3 +9,5 @@ reports/*.json
 __pycache__/
 .pytest_cache/
 .superpowers/
+!export/fire.pt
+!export/meta.json

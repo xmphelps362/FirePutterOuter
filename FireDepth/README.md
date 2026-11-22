@@ -5,7 +5,7 @@ is slower, so it runs in its own thread on the newest frame, and each detection'
 finished depth map (on a 3060 Ti: YOLO about 19 fps, depth about 10 fps at the same time). The distance is the median
 depth of the middle of the detection box.
 
-Both versions need `YoloFire/export/fire.pt`, which is not in git. Copy it from the training machine.
+Both versions use `YoloFire/export/fire.pt`, which is in git.
 
 ## WSL (laptop webcam)
 

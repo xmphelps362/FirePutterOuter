@@ -18,16 +18,19 @@ Results and the model choice: `reports/results.md`. Log every training run in `e
 
 ## Jetson (JetPack 5.1 or 6)
 
+Plug in the USB webcam, then on the Jetson:
+
 ```bash
-ssh <user>@<jetson> mkdir -p candle-fire
-scp -r export jetson <user>@<jetson>:~/candle-fire/
-# on the Jetson:
-bash ~/candle-fire/jetson/setup_jetson.sh      # once
-bash ~/candle-fire/jetson/run.sh               # webcam + bundled export/fire.onnx, with preview
+git clone git@github.com:xmphelps362/FirePutterOuter.git && cd FirePutterOuter
+bash YoloFire/jetson/setup_jetson.sh      # once, about 10 minutes, needs internet and sudo
+bash YoloFire/jetson/run.sh               # webcam 0 + export/fire.pt, with preview
 ```
 
-Optional, for more FPS: `bash ~/candle-fire/jetson/build_engine.sh ~/candle-fire/export/fire.pt` (on the Jetson),
-then `bash ~/candle-fire/jetson/run.sh --model ~/candle-fire/export/fire.engine`.
+Optional, for more FPS: `bash YoloFire/jetson/build_engine.sh YoloFire/export/fire.pt` builds a TensorRT
+`fire.engine` (several minutes). `run.sh` uses it automatically once it exists.
+
+If it doesn't start: `v4l2-ctl --list-devices` shows the cameras (try `run.sh --source /dev/video1`), and
+`setup_jetson.sh` ends with an error if torch can't see the GPU (wrong wheel for that JetPack).
 
 It prints one JSON line per frame: `frame_id`, `timestamp`, `width`, `height`, and `detections`
 (each with `class`, `confidence`, `box` [x1,y1,x2,y2], `center`). Default `--conf` is 0.3; raise it only if you get
@@ -38,10 +41,10 @@ false alarms. `--show` needs a monitor (it's skipped over SSH). Other options: `
 Only one program can open the webcam, so call the detector on frames you already have:
 
 ```python
-import sys; sys.path.insert(0, "/home/<user>/candle-fire/jetson")
+import sys; sys.path.insert(0, "<repo>/YoloFire/jetson")
 from fire_detector import FireDetector
 
-fire = FireDetector("/home/<user>/candle-fire/export/fire.engine")
+fire = FireDetector("<repo>/YoloFire/export/fire.pt")
 result = fire.detect(frame, frame_id)          # BGR frame; pass color="rgb" if yours is RGB
 dh, dw = depth.shape[:2]                       # depth map may be a different size than the frame
 for d in result.detections:

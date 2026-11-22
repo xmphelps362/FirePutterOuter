@@ -1,6 +1,6 @@
 """Live lit/unlit candle detection from the USB webcam, a video file or an image folder.
 
-  python3 detect_camera.py --show                       # uses ../export/fire.onnx, webcam 0
+  python3 detect_camera.py --show                       # uses ../export/fire.engine or fire.pt, webcam 0
   python3 detect_camera.py --source clip.mp4 --save out.mp4
 
 Prints one JSON line per frame (see FrameResult.to_json). FPS goes to stderr. Ctrl+C or q stops.
@@ -18,7 +18,8 @@ import cv2
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fire_detector import FireDetector  # noqa: E402
 
-DEFAULT_MODEL = Path(__file__).resolve().parent.parent / "export" / "fire.onnx"
+EXPORT_DIR = Path(__file__).resolve().parent.parent / "export"
+DEFAULT_MODEL = next(p for p in (EXPORT_DIR / "fire.engine", EXPORT_DIR / "fire.pt") if p.exists() or p.suffix == ".pt")
 IMG_EXT = (".jpg", ".jpeg", ".png", ".bmp")
 MAX_FAILED_READS = 5
 COLORS = {"lit_candle": (0, 0, 255), "unlit_candle": (255, 200, 0)}
@@ -65,7 +66,7 @@ def draw(frame, result):
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--model", default=str(DEFAULT_MODEL), help="default: export/fire.onnx next to this folder")
+    ap.add_argument("--model", default=str(DEFAULT_MODEL), help="default: export/fire.engine if built, else export/fire.pt")
     ap.add_argument("--source", default="0", help="camera index, /dev/videoN, video file or image folder")
     ap.add_argument("--width", type=int, default=1280)
     ap.add_argument("--height", type=int, default=720)

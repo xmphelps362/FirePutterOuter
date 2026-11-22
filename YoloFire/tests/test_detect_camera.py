@@ -32,11 +32,11 @@ def test_runs_on_image_dir(img_dir):
     assert all(l["width"] == 640 and l["height"] == 360 for l in lines)
 
 
-def test_default_model_is_bundled_onnx(img_dir):
+def test_default_model_is_bundled(img_dir):
     p = subprocess.run([sys.executable, str(SCRIPT), "--source", str(img_dir), "--max-frames", "1", "--device", "cpu"],
                        cwd="/", capture_output=True, text=True, timeout=180)
     assert p.returncode == 0, p.stderr
-    assert "fire.onnx" in p.stderr
+    assert "export/fire." in p.stderr
     assert json.loads(p.stdout.splitlines()[-1])["frame_id"] == 0
 
 
