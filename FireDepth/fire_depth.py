@@ -4,6 +4,7 @@ import json
 import math
 import sys
 import threading
+import traceback
 from pathlib import Path
 
 import numpy as np
@@ -86,4 +87,7 @@ class FireDepth:
         while self._depth_requested.wait():
             self._depth_requested.clear()
             frame_bgr, frame_id, focal_length_per_width = self._depth_request
-            self.newest_depth = frame_id, self.depth_estimator.estimate_meters(frame_bgr, focal_length_per_width)
+            try:
+                self.newest_depth = frame_id, self.depth_estimator.estimate_meters(frame_bgr, focal_length_per_width)
+            except Exception:
+                traceback.print_exc()

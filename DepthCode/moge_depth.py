@@ -3,6 +3,7 @@ Takes Microsoft's export (any image size) or export_moge.py's fixed-size one, wh
 The post-processing follows MoGe's MoGeModel.infer()."""
 from __future__ import annotations
 
+import hashlib
 import urllib.request
 from pathlib import Path
 
@@ -11,7 +12,9 @@ import numpy as np
 from scipy.optimize import least_squares
 
 DEFAULT_MODEL = Path(__file__).resolve().parent / "models" / "moge-2-vits.onnx"
-MODEL_URL = "https://huggingface.co/Ruicheng/moge-2-vits-normal-onnx/resolve/main/model.onnx"
+MODEL_URL = ("https://huggingface.co/Ruicheng/moge-2-vits-normal-onnx/resolve/"
+             "e50ffda41565591092adea54c6ac83d6212e1e23/model.onnx")
+MODEL_SHA256 = "24eacb5dc7a2c54c7bc98f7de085ffbed79ad006ea5b664c2c2cdc02ff3a52f0"
 SHIFT_FIT_SIZE = (64, 64)
 NUM_TOKENS = 1200  # MoGe-2 was trained with 1200-3600; fewer is faster
 
@@ -56,8 +59,11 @@ class MogeDepthEstimator:
         if not model_path.exists():
             print(f"Downloading MoGe-2 (140 MB) to {model_path}")
             model_path.parent.mkdir(parents=True, exist_ok=True)
-            urllib.request.urlretrieve(MODEL_URL, f"{model_path}.part")
-            Path(f"{model_path}.part").rename(model_path)
+            download = Path(f"{model_path}.part")
+            urllib.request.urlretrieve(MODEL_URL, download)
+            if hashlib.sha256(download.read_bytes()).hexdigest() != MODEL_SHA256:
+                raise RuntimeError(f"{download} doesn't match the tested MoGe-2 model; delete it and try again.")
+            download.rename(model_path)
         if hasattr(onnxruntime, "preload_dlls"):
             onnxruntime.preload_dlls()  # loads the CUDA libraries pip installed with onnxruntime-gpu[cuda,cudnn]
         model_path = str(model_path)
@@ -66,7 +72,9 @@ class MogeDepthEstimator:
         # TensorRT needs the fixed-size export; the other one has shapes that depend on num_tokens.
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
         if fixed_size:
-            providers.insert(0, ("TensorrtExecutionProvider", {"trt_fp16_enable": True, "trt_engine_cache_enable": True,
+            # LayerNorm overflows in FP16, so TensorRT keeps it in FP32.
+            providers.insert(0, ("TensorrtExecutionProvider", {"trt_fp16_enable": True, "trt_layer_norm_fp32_fallback": True,
+                                                               "trt_engine_cache_enable": True,
                                                                "trt_engine_cache_path": str(Path(model_path).parent)}))
         self._session = onnxruntime.InferenceSession(model_path, providers=providers)
         self.providers = self._session.get_providers()

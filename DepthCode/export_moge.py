@@ -29,5 +29,5 @@ model = FixedTokenMoGe.from_pretrained("Ruicheng/moge-2-vits-normal").eval()
 model.onnx_compatible_mode = True
 OUTPUT.parent.mkdir(parents=True, exist_ok=True)
 torch.onnx.export(model, (torch.rand(1, 3, 480, 640),), str(OUTPUT), input_names=["image"],
-                  output_names=["points", "normal", "mask", "scale"], opset_version=17, dynamo=False)
+                  output_names=["points", "normal", "mask", "scale"], opset_version=14, dynamo=False)
 print(OUTPUT)

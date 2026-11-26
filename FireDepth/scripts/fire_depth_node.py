@@ -17,6 +17,7 @@ from fire_depth import (DEFAULT_FIRE_MODEL, FireDepth, bearing, camera_point, de
                         nearest_lit_candle)
 
 TRANSFORM_TIMEOUT = rospy.Duration(0.1)
+MAX_DEPTH_LAG_FRAMES = 300
 
 
 class FireDepthNode:
@@ -53,6 +54,7 @@ class FireDepthNode:
         camera_header = Header(stamp=image_message.header.stamp,
                                frame_id=self._optical_frame or image_message.header.frame_id)
         self._header_by_frame_id[self._frame_id] = camera_header
+        self._header_by_frame_id.pop(self._frame_id - MAX_DEPTH_LAG_FRAMES, None)  # bounded while depth keeps failing
         self._frame_id += 1
         self._publish_new_depth()
 
@@ -95,7 +97,7 @@ class FireDepthNode:
         depth_message = self._bridge.cv2_to_imgmsg(depth_meters, "32FC1")
         depth_message.header = depth_header
         self._depth_publisher.publish(depth_message)
-        if self._camera_info is not None:
+        if self._camera_info is not None and self._camera_info.K[0] > 0:
             self._camera_info.header = depth_header
             self._depth_info_publisher.publish(self._camera_info)
 
