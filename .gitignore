@@ -5,5 +5,4 @@ __pycache__/
 *.pt
 *.onnx
 *.engine
-depth-anything-3/
-FireDepth/models/
+DepthCode/models/

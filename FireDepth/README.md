@@ -1,23 +1,23 @@
 # Fire depth
 
-YOLO finds lit and unlit candles and a depth model measures how far away they are. YOLO runs on every frame. Depth is
-slower, so it runs in its own thread on the newest frame, and each detection's distance comes from the newest finished
-depth map. The distance is the median depth of the middle of the detection box.
+YOLO finds lit and unlit candles and MoGe-2 ViT-S measures how far away they are, the same code on the laptop and the
+Jetson. YOLO runs on every frame. Depth is slower, so it runs in its own thread on the newest frame, and each
+detection's distance comes from the newest finished depth map. The distance is the median depth of the middle of the
+detection box.
 
-- **Laptop (WSL):** Depth Anything 3 on the 3060 Ti (YOLO about 19 fps, depth about 10 fps).
-- **Jetson Xavier NX (JetPack 5.1, ROS 1 Noetic):** MoGe-2 ViT-S as an ONNX model. Depth Anything 3 needs Python 3.9+,
-  and JetPack 5.1 has Python 3.8.
-
-Both use `YoloFire/export/fire.pt`, which is in git.
+MoGe-2 runs from an ONNX file (`DepthCode/moge_depth.py`), so it works on the Jetson's Python 3.8. It downloads itself
+(140 MB) to `DepthCode/models/` the first time. Without a camera calibration, MoGe estimates the focal length itself.
+YOLO uses `YoloFire/export/fire.pt`, which is in git.
 
 ## WSL (laptop webcam)
 
 ```bash
-~/ENEE408/.venv/bin/python FireDepth/fire_depth_view.py
+bash Setup/setup_env.sh   # once: Setup/.venv with PyTorch, ONNX Runtime GPU and Ultralytics
+Setup/.venv/bin/python FireDepth/fire_depth_view.py
 ```
 
 This shows the camera and the depth heatmap side by side, with boxes and distances, and prints one line per detection.
-Options: `--confidence`, `--processing-resolution` (lower is faster), `--horizontal-fov-degrees`.
+Options: `--confidence`, `--max-display-meters`. `DepthCode/live_view.py` shows depth alone and saves it with S.
 
 ## ROS 1 Noetic on the Jetson Xavier NX (JetPack 5.1)
 
@@ -57,8 +57,8 @@ Publishes, under `/robot/` or `/tower/`:
 ### Faster depth with TensorRT (optional)
 
 The downloaded MoGe-2 model takes any image size, which TensorRT can't run, so it runs on ONNX Runtime's CUDA backend.
-`export_moge.py` makes a fixed 640x480 one on the PC (instructions at the top of the file); copy it over
-`FireDepth/models/moge-2-vits.onnx` on the Jetson. The node then runs it with TensorRT in FP16; the first start builds
+`DepthCode/export_moge.py` makes a fixed 640x480 one on the PC (instructions at the top of the file); copy it to the
+Jetson as `DepthCode/models/moge-2-vits.onnx`. The node then runs it with TensorRT in FP16; the first start builds
 the engine, which takes several minutes. The log line at startup says which backend is in use.
 
 Tests (no models needed): `python -m pytest FireDepth/tests`

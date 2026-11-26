@@ -36,7 +36,7 @@ It prints one JSON line per frame: `frame_id`, `timestamp`, `width`, `height`, a
 (each with `class`, `confidence`, `box` [x1,y1,x2,y2], `center`). Default `--conf` is 0.3; raise it only if you get
 false alarms. `--show` needs a monitor (it's skipped over SSH). Other options: `--source`, `--save out.mp4`.
 
-## Calling it from the Depth Anything code
+## Calling it from other code
 
 Only one program can open the webcam, so call the detector on frames you already have:
 

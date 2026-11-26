@@ -12,7 +12,8 @@ REPO_DIR = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(REPO_DIR / "DepthCode"), str(REPO_DIR / "YoloFire" / "jetson")]
 
 from detect_camera import DEFAULT_MODEL as DEFAULT_FIRE_MODEL  # noqa: E402, F401
-from fire_detector import Detection, FireDetector, FrameResult  # noqa: E402, F401
+from fire_detector import Detection, FireDetector, FrameResult  # noqa: E402
+from moge_depth import MogeDepthEstimator  # noqa: E402
 
 
 def distance_meters(detection: Detection, depth_meters: np.ndarray) -> float:
@@ -62,10 +63,9 @@ class FireDepth:
     """YOLO runs on every frame. Depth is slower, so it runs in its own thread on the newest frame,
     and distances come from the newest finished depth map."""
 
-    def __init__(self, fire_detector: FireDetector, depth_estimator) -> None:
-        """depth_estimator: MogeDepthEstimator on the Jetson, MetricDepthEstimator (Depth Anything 3) on the PC."""
-        self.fire_detector = fire_detector
-        self.depth_estimator = depth_estimator
+    def __init__(self, fire_model: str, confidence: float) -> None:
+        self.fire_detector = FireDetector(fire_model, conf=confidence)
+        self.depth_estimator = MogeDepthEstimator()
         self.newest_depth: tuple[int, np.ndarray] | None = None
         self._depth_request: tuple[np.ndarray, int, float | None] | None = None
         self._depth_requested = threading.Event()

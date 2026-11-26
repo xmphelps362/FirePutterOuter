@@ -6,7 +6,6 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CATKIN_WS="${CATKIN_WS:-$HOME/catkin_ws}"
-DEPTH_MODEL="$REPO_DIR/FireDepth/models/moge-2-vits.onnx"
 
 grep -q "R35" /etc/nv_tegra_release || { echo "ROS Noetic needs JetPack 5 (L4T R35): $(cat /etc/nv_tegra_release)"; exit 1; }
 # YOLO's venv (YoloFire/jetson/.venv) has the Jetson torch and ONNX Runtime; the node runs in it too.
@@ -28,8 +27,7 @@ set -u
 (cd "$CATKIN_WS" && catkin_make)
 
 "$REPO_DIR/YoloFire/jetson/.venv/bin/pip" install scipy
-mkdir -p "$(dirname "$DEPTH_MODEL")"
-[ -f "$DEPTH_MODEL" ] || { wget -O "$DEPTH_MODEL.part" \
-    https://huggingface.co/Ruicheng/moge-2-vits-normal-onnx/resolve/main/model.onnx && mv "$DEPTH_MODEL.part" "$DEPTH_MODEL"; }
-"$REPO_DIR/YoloFire/jetson/.venv/bin/python" -c "import cv_bridge, rospy, scipy, tf2_geometry_msgs"
+# Downloads MoGe-2 on first run and checks ONNX Runtime can load it.
+PYTHONPATH="$REPO_DIR/DepthCode:${PYTHONPATH:-}" "$REPO_DIR/YoloFire/jetson/.venv/bin/python" -c \
+    "import cv_bridge, rospy, tf2_geometry_msgs; from moge_depth import MogeDepthEstimator; print(MogeDepthEstimator().providers)"
 echo "Setup done. See FireDepth/README.md to run it."

@@ -1,14 +1,17 @@
-"""MoGe-2 metric depth from ONNX, so it runs on the Jetson's Python 3.8 without MoGe's PyTorch code.
-Takes Microsoft's export (any image size) or FireDepth/export_moge.py's fixed-size one, which TensorRT can run.
+"""MoGe-2 metric depth from ONNX, so the same code runs on the laptop and on the Jetson's Python 3.8.
+Takes Microsoft's export (any image size) or export_moge.py's fixed-size one, which TensorRT can run.
 The post-processing follows MoGe's MoGeModel.infer()."""
 from __future__ import annotations
 
+import urllib.request
 from pathlib import Path
 
 import cv2
 import numpy as np
 from scipy.optimize import least_squares
 
+DEFAULT_MODEL = Path(__file__).resolve().parent / "models" / "moge-2-vits.onnx"
+MODEL_URL = "https://huggingface.co/Ruicheng/moge-2-vits-normal-onnx/resolve/main/model.onnx"
 SHIFT_FIT_SIZE = (64, 64)
 NUM_TOKENS = 1200  # MoGe-2 was trained with 1200-3600; fewer is faster
 
@@ -46,10 +49,18 @@ def fit_focal_and_shift(points: np.ndarray, valid: np.ndarray, focal: float | No
 
 
 class MogeDepthEstimator:
-    def __init__(self, model_path: str) -> None:
+    def __init__(self, model_path: Path = DEFAULT_MODEL) -> None:
         import onnx
         import onnxruntime
 
+        if not model_path.exists():
+            print(f"Downloading MoGe-2 (140 MB) to {model_path}")
+            model_path.parent.mkdir(parents=True, exist_ok=True)
+            urllib.request.urlretrieve(MODEL_URL, f"{model_path}.part")
+            Path(f"{model_path}.part").rename(model_path)
+        if hasattr(onnxruntime, "preload_dlls"):
+            onnxruntime.preload_dlls()  # loads the CUDA libraries pip installed with onnxruntime-gpu[cuda,cudnn]
+        model_path = str(model_path)
         inputs = onnx.load(model_path).graph.input
         fixed_size = len(inputs) == 1
         # TensorRT needs the fixed-size export; the other one has shapes that depend on num_tokens.

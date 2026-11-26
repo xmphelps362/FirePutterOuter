@@ -13,11 +13,9 @@ from std_msgs.msg import Float32, Header, String
 
 FIRE_DEPTH_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(FIRE_DEPTH_DIR))
-from fire_depth import (DEFAULT_FIRE_MODEL, FireDepth, FireDetector, bearing, camera_point,  # noqa: E402
-                        detections_json, nearest_lit_candle)
-from moge_depth import MogeDepthEstimator  # noqa: E402
+from fire_depth import (DEFAULT_FIRE_MODEL, FireDepth, bearing, camera_point, detections_json,  # noqa: E402
+                        nearest_lit_candle)
 
-DEPTH_MODEL = FIRE_DEPTH_DIR / "models" / "moge-2-vits.onnx"
 TRANSFORM_TIMEOUT = rospy.Duration(0.1)
 
 
@@ -25,10 +23,8 @@ class FireDepthNode:
     def __init__(self) -> None:
         self._target_frame = rospy.get_param("~target_frame", "base_link")
         self._optical_frame = rospy.get_param("~optical_frame", "")
-        self._depth_estimator = MogeDepthEstimator(str(DEPTH_MODEL))
-        rospy.loginfo(f"YOLO: {DEFAULT_FIRE_MODEL}. Depth on {self._depth_estimator.providers[0]}.")
-        fire_detector = FireDetector(str(DEFAULT_FIRE_MODEL), conf=rospy.get_param("~confidence", 0.3))
-        self._fire_depth = FireDepth(fire_detector, self._depth_estimator)
+        self._fire_depth = FireDepth(str(DEFAULT_FIRE_MODEL), rospy.get_param("~confidence", 0.3))
+        rospy.loginfo(f"YOLO: {DEFAULT_FIRE_MODEL}. Depth on {self._fire_depth.depth_estimator.providers[0]}.")
         self._bridge = CvBridge()
         self._camera_info = None
         self._frame_id = 0
@@ -65,7 +61,7 @@ class FireDepthNode:
             if calibrated:
                 fx, cx, fy, cy = (self._camera_info.K[i] for i in (0, 2, 4, 5))
             else:
-                fx = fy = self._depth_estimator.focal_length_per_width * width
+                fx = fy = self._fire_depth.depth_estimator.focal_length_per_width * width
                 cx, cy = width / 2, height / 2
             try:
                 camera_to_target = self._tf_buffer.lookup_transform(

@@ -6,7 +6,7 @@ import time
 import cv2
 import numpy as np
 
-from depth_estimator import MetricDepthEstimator, to_depth_millimeters
+from moge_depth import MogeDepthEstimator
 from windows_webcam import WindowsWebcam
 
 ESCAPE_KEY = 27
@@ -15,8 +15,14 @@ SCALE_BAR_WIDTH = 25
 SCALE_LABEL_WIDTH = 45
 
 
+def to_depth_millimeters(depth_meters: np.ndarray) -> np.ndarray:
+    """ROS 16UC1 convention: 0 means no depth."""
+    millimeters = np.round(np.nan_to_num(depth_meters, nan=0.0) * 1000)
+    return np.clip(millimeters, 0, np.iinfo(np.uint16).max).astype(np.uint16)
+
+
 def depth_heatmap(depth_meters: np.ndarray, max_display_meters: float) -> np.ndarray:
-    nearness = 1.0 - np.clip(depth_meters / max_display_meters, 0.0, 1.0)
+    nearness = 1.0 - np.clip(np.nan_to_num(depth_meters, nan=max_display_meters) / max_display_meters, 0.0, 1.0)
     return cv2.applyColorMap((nearness * 255).astype(np.uint8), cv2.COLORMAP_TURBO)
 
 
@@ -35,13 +41,11 @@ def color_scale(height: int, max_display_meters: float) -> np.ndarray:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Live depth heatmap from the Windows webcam.")
     parser.add_argument("--camera-index", type=int, default=0)
-    parser.add_argument("--processing-resolution", type=int, default=392, help="Lower is faster. Multiple of 14.")
-    parser.add_argument("--horizontal-fov-degrees", type=float, default=65.0)
     parser.add_argument("--max-display-meters", type=float, default=4.0, help="Depth at the far end of the colormap.")
     arguments = parser.parse_args()
 
     print("Loading model...")
-    depth_estimator = MetricDepthEstimator(arguments.horizontal_fov_degrees, arguments.processing_resolution)
+    depth_estimator = MogeDepthEstimator()
     webcam = WindowsWebcam(arguments.camera_index)
     print("Press S to save a 16-bit depth PNG (millimeters), Esc to quit.")
     depth_meters = None
