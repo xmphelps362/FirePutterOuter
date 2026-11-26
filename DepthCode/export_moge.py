@@ -2,7 +2,7 @@
 Run on the PC (Python 3.10+, PyTorch 2.5+), then copy the output to the Jetson as DepthCode/models/moge-2-vits.onnx:
 
   git clone https://github.com/microsoft/MoGe ~/MoGe
-  pip install huggingface_hub onnx "utils3d_moge @ git+https://github.com/EasternJournalist/utils3d-moge.git@62f09d58509485564e24d5d9f6aac9ee9ebc0c37"
+  pip install torch huggingface_hub onnx opencv-python scipy "utils3d_moge @ git+https://github.com/EasternJournalist/utils3d-moge.git@62f09d58509485564e24d5d9f6aac9ee9ebc0c37"
   python DepthCode/export_moge.py ~/MoGe
 """
 import os
