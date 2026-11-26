@@ -1,11 +1,14 @@
 # Fire depth
 
-YOLO finds lit and unlit candles, and Depth Anything 3 measures how far away they are. YOLO runs on every frame. Depth
-is slower, so it runs in its own thread on the newest frame, and each detection's distance comes from the newest
-finished depth map (on a 3060 Ti: YOLO about 19 fps, depth about 10 fps at the same time). The distance is the median
-depth of the middle of the detection box.
+YOLO finds lit and unlit candles and a depth model measures how far away they are. YOLO runs on every frame. Depth is
+slower, so it runs in its own thread on the newest frame, and each detection's distance comes from the newest finished
+depth map. The distance is the median depth of the middle of the detection box.
 
-Both versions use `YoloFire/export/fire.pt`, which is in git.
+- **Laptop (WSL):** Depth Anything 3 on the 3060 Ti (YOLO about 19 fps, depth about 10 fps).
+- **Jetson Xavier NX (JetPack 5.1, ROS 1 Noetic):** MoGe-2 ViT-S as an ONNX model. Depth Anything 3 needs Python 3.9+,
+  and JetPack 5.1 has Python 3.8.
+
+Both use `YoloFire/export/fire.pt`, which is in git.
 
 ## WSL (laptop webcam)
 
@@ -16,29 +19,46 @@ Both versions use `YoloFire/export/fire.pt`, which is in git.
 This shows the camera and the depth heatmap side by side, with boxes and distances, and prints one line per detection.
 Options: `--confidence`, `--processing-resolution` (lower is faster), `--horizontal-fov-degrees`.
 
-## ROS2 Humble on the Jetson (JetPack 6)
+## ROS 1 Noetic on the Jetson Xavier NX (JetPack 5.1)
+
+Once, with internet: runs `YoloFire/jetson/setup_jetson.sh` (Jetson PyTorch and ONNX Runtime in
+`YoloFire/jetson/.venv`), installs ROS Noetic and `usb_cam`, downloads MoGe-2, and links this folder into
+`~/catkin_ws/src` as the `fire_depth` package.
 
 ```bash
-bash FireDepth/setup_ros_env.sh        # once: Jetson torch, Depth Anything, YOLO in .venv-ros
-source .venv-ros/bin/activate && bash YoloFire/jetson/build_engine.sh YoloFire/export/fire.pt   # once, optional: TensorRT YOLO
-source /opt/ros/humble/setup.bash
-ros2 launch FireDepth/fire_depth.launch.py camera_x:=0.07 camera_z:=0.12 camera_pitch:=0.0
+bash FireDepth/setup_jetson.sh
+bash YoloFire/jetson/build_engine.sh YoloFire/export/fire.pt   # optional, faster YOLO
 ```
 
-The launch file uses `fire.engine` if it exists, otherwise `fire.pt`. The first run downloads the Depth Anything
-weights (about 1.4 GB), so the Jetson needs internet once. If depth is too slow, try `processing_resolution:=266`.
-YOLO keeps its own rate either way.
+Every time (the venv first, so the node runs on the Python that has the models):
 
-Subscribes to `/camera/image_raw` and `/camera/camera_info`. Change them with `image_topic:=` and `camera_info_topic:=`.
+```bash
+source YoloFire/jetson/.venv/bin/activate && source ~/catkin_ws/devel/setup.bash
+export ROS_MASTER_URI=http://<computer running roscore>:11311 ROS_HOSTNAME=<this Jetson's IP>
+roslaunch fire_depth fire_depth.launch camera_x:=0.05 camera_z:=0.15 camera_pitch:=0.2                           # robot
+roslaunch fire_depth fire_depth.launch name:=tower parent_frame:=tower camera_z:=1.5 camera_pitch:=0.6           # tower
+```
 
-Publishes:
-- `/fire/detections` (`vision_msgs/Detection3DArray`): each candle's class, score, position and approximate size
-  in `target_frame` (default `base_link`).
-- `/depth/image` (`32FC1`, meters) and `/depth/camera_info`. Each depth image is stamped with the camera frame it was
-  computed from, so `depth_image_proc` can turn it into a point cloud.
+The launch file starts `usb_cam` on `/dev/video0` at 640x480 (`video_device:=`), the camera's tf frames from the
+`camera_*` arguments (meters and radians, positive pitch tilts down) and the node, all in the namespace `name`. If
+another machine publishes the camera, use `start_camera:=false` and publish it as `/<name>/usb_cam/image_raw` (and
+`camera_info`). For the best focal length, calibrate each webcam with `camera_calibration` and pass
+`camera_info_url:=file:///path/to/calibration.yaml`. Without it, MoGe estimates it.
 
-Transforms: a candle's pixel center and distance become a 3D point in the camera optical frame through the camera
-intrinsics, and tf2 then moves that point into `target_frame`. The launch file publishes `base_link → camera_link →
-camera_optical_frame` from the `camera_*` arguments (meters and radians). If the robot's URDF already has camera frames,
-pass `publish_camera_tf:=false optical_frame:=<its optical frame>`. Without `camera_info`, the focal length falls back to
-`horizontal_fov_degrees` (65).
+Publishes, under `/robot/` or `/tower/`:
+- `fire/bearing` (`std_msgs/Float32`): where the target candle is across the image, -1 left edge to 1 right edge, NaN
+  when no lit candle is in view. The target is the nearest lit candle. Ready for a Lab 4 style P-controller.
+- `fire/target` (`geometry_msgs/PointStamped`): the target candle's position in `parent_frame`, once depth is ready.
+- `fire/detections` (`std_msgs/String`): every candle in one JSON line, with `class`, `confidence`, `box`, `bearing`,
+  `distance` (meters) and `position` (in `frame`), null until depth is ready.
+- `depth/image` (`32FC1`, meters, NaN where there is no depth) and `depth/camera_info`, stamped with the frame the depth
+  was computed from.
+
+### Faster depth with TensorRT (optional)
+
+The downloaded MoGe-2 model takes any image size, which TensorRT can't run, so it runs on ONNX Runtime's CUDA backend.
+`export_moge.py` makes a fixed 640x480 one on the PC (instructions at the top of the file); copy it over
+`FireDepth/models/moge-2-vits.onnx` on the Jetson. The node then runs it with TensorRT in FP16; the first start builds
+the engine, which takes several minutes. The log line at startup says which backend is in use.
+
+Tests (no models needed): `python -m pytest FireDepth/tests`

@@ -4,7 +4,8 @@ import time
 import cv2
 import numpy as np
 
-from fire_depth import DEFAULT_FIRE_MODEL, FireDepth
+from fire_depth import DEFAULT_FIRE_MODEL, FireDepth, FireDetector
+from depth_estimator import MetricDepthEstimator
 from live_view import color_scale, depth_heatmap
 from windows_webcam import WindowsWebcam
 
@@ -32,8 +33,8 @@ def main() -> None:
     arguments = parser.parse_args()
 
     print("Loading models...")
-    fire_depth = FireDepth(arguments.fire_model, arguments.confidence, arguments.horizontal_fov_degrees,
-                           arguments.processing_resolution)
+    fire_depth = FireDepth(FireDetector(arguments.fire_model, conf=arguments.confidence),
+                           MetricDepthEstimator(arguments.horizontal_fov_degrees, arguments.processing_resolution))
     webcam = WindowsWebcam(arguments.camera_index)
     print("Esc to quit.")
     frame_id, previous_frame_time = 0, time.monotonic()
@@ -49,6 +50,7 @@ def main() -> None:
             print(f"{frame_id} {fire.cls} {fire.confidence:.2f} {distance:.2f} m")
 
         heatmap = depth_heatmap(fire_depth.newest_depth[1], arguments.max_display_meters)
+        frame_bgr = frame_bgr.copy()  # the depth thread may not have read the original yet
         draw_fires(frame_bgr, fires.detections, distances)
         draw_fires(heatmap, fires.detections, distances)
         frames_per_second = 1 / (time.monotonic() - previous_frame_time)

@@ -1,0 +1,45 @@
+<!-- Robot camera (positions in base_link):
+       roslaunch fire_depth fire_depth.launch camera_x:=0.05 camera_z:=0.15 camera_pitch:=0.2
+     Tower camera (positions in the tower frame, on the floor below the camera, x the way it faces):
+       roslaunch fire_depth fire_depth.launch name:=tower parent_frame:=tower camera_z:=1.5 camera_pitch:=0.6 -->
+<launch>
+  <arg name="name" default="robot"/>
+  <arg name="parent_frame" default="base_link"/>
+  <!-- Camera position in parent_frame, in meters and radians. Positive pitch tilts the camera down. -->
+  <arg name="camera_x" default="0.0"/>
+  <arg name="camera_y" default="0.0"/>
+  <arg name="camera_z" default="0.15"/>
+  <arg name="camera_yaw" default="0.0"/>
+  <arg name="camera_pitch" default="0.0"/>
+  <arg name="start_camera" default="true"/>
+  <arg name="video_device" default="/dev/video0"/>
+  <!-- file:///path/to/calibration.yaml from camera_calibration. Without it, MoGe estimates the focal length. -->
+  <arg name="camera_info_url" default=""/>
+  <arg name="confidence" default="0.3"/>
+
+  <group ns="$(arg name)">
+    <node if="$(arg start_camera)" pkg="usb_cam" type="usb_cam_node" name="usb_cam">
+      <param name="video_device" value="$(arg video_device)"/>
+      <param name="image_width" value="640"/>
+      <param name="image_height" value="480"/>
+      <param name="pixel_format" value="mjpeg"/>
+      <param name="framerate" value="30"/>
+      <param name="camera_frame_id" value="$(arg name)_camera_optical_frame"/>
+      <param name="camera_info_url" value="$(arg camera_info_url)"/>
+    </node>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_tf"
+          args="$(arg camera_x) $(arg camera_y) $(arg camera_z) $(arg camera_yaw) $(arg camera_pitch) 0 $(arg parent_frame) $(arg name)_camera_link"/>
+    <!-- camera_link is x forward, z up; the optical frame is z forward, y down. -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="optical_tf"
+          args="0 0 0 -1.5707963 0 -1.5707963 $(arg name)_camera_link $(arg name)_camera_optical_frame"/>
+
+    <node pkg="fire_depth" type="fire_depth_node.py" name="fire_depth" output="screen">
+      <!-- Stops Ultralytics from pip-installing over the Jetson torch and numpy, as in YoloFire/jetson/run.sh. -->
+      <env name="YOLO_AUTOINSTALL" value="false"/>
+      <param name="target_frame" value="$(arg parent_frame)"/>
+      <param name="optical_frame" value="$(arg name)_camera_optical_frame"/>
+      <param name="confidence" value="$(arg confidence)"/>
+    </node>
+  </group>
+</launch>
