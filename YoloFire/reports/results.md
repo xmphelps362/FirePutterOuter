@@ -1,7 +1,7 @@
 # Results
 
 Chosen model: **n640** (yolo26n, 640 input). It ties the bigger runs on lit candles and is the cheapest to run next to
-Depth Anything on the Jetson. See `experiments/journal.md` for why.
+the depth model on the Jetson. See `experiments/journal.md` for why.
 
 Caveats: every photo is the same tealight on the same floor, and the test split was also used to pick the model, so these
 numbers are optimistic. The shrunk sets (small_k2/k3) reuse a few test photos to fill their last mosaic.

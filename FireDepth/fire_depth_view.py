@@ -26,14 +26,11 @@ def main() -> None:
     parser.add_argument("--camera-index", type=int, default=0)
     parser.add_argument("--fire-model", default=str(DEFAULT_FIRE_MODEL))
     parser.add_argument("--confidence", type=float, default=0.3)
-    parser.add_argument("--processing-resolution", type=int, default=392, help="Lower is faster. Multiple of 14.")
-    parser.add_argument("--horizontal-fov-degrees", type=float, default=65.0)
     parser.add_argument("--max-display-meters", type=float, default=4.0)
     arguments = parser.parse_args()
 
     print("Loading models...")
-    fire_depth = FireDepth(arguments.fire_model, arguments.confidence, arguments.horizontal_fov_degrees,
-                           arguments.processing_resolution)
+    fire_depth = FireDepth(arguments.fire_model, arguments.confidence)
     webcam = WindowsWebcam(arguments.camera_index)
     print("Esc to quit.")
     frame_id, previous_frame_time = 0, time.monotonic()
@@ -49,6 +46,7 @@ def main() -> None:
             print(f"{frame_id} {fire.cls} {fire.confidence:.2f} {distance:.2f} m")
 
         heatmap = depth_heatmap(fire_depth.newest_depth[1], arguments.max_display_meters)
+        frame_bgr = frame_bgr.copy()  # the depth thread may not have read the original yet
         draw_fires(frame_bgr, fires.detections, distances)
         draw_fires(heatmap, fires.detections, distances)
         frames_per_second = 1 / (time.monotonic() - previous_frame_time)

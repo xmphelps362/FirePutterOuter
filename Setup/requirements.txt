@@ -1,5 +1,5 @@
 opencv-python
-numpy<2
-addict
-scikit-learn
+onnx
+onnxruntime-gpu[cuda,cudnn]
+scipy
 ultralytics
